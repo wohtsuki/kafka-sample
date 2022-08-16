@@ -1,4 +1,6 @@
 ﻿using Confluent.Kafka;
+using consumer;
+using System.Text.Json;
 
 var consumerConfig = new ConsumerConfig
 {
@@ -21,8 +23,9 @@ using (var consumer = new ConsumerBuilder<string, string>(consumerConfig).Build(
     {
         var consumerResult = consumer.Consume();
         var value = consumerResult.Message.Value;
-        Console.WriteLine($"Received user: {value}");
-        Thread.Sleep(500);
+        var user = JsonSerializer.Deserialize<User>(value);
+
+        Console.WriteLine($"User received user: {consumerResult.Message.Key}, {user.Firstname} {user.Lastname}");
     }
 }
     

@@ -1,4 +1,6 @@
 ﻿using Confluent.Kafka;
+using producer;
+using System.Text.Json;
 
 var producerConfig = new ProducerConfig
 {
@@ -19,14 +21,20 @@ string topic = "test1";
 
 while (true)
 {
-    string guidKey = Guid.NewGuid().ToString();
+    User user = new()
+    {
+        Id = Guid.NewGuid().ToString(),
+        Firstname = Faker.Name.FirstName(),
+        Lastname = Faker.Name.LastName(),   
+    };
+
     Message<string, string> msg = new()
     {
-        Key = guidKey,
-        Value = Faker.Name.FirstName()
+        Key = user.Id,
+        Value = JsonSerializer.Serialize(user)
     };
     await producer.ProduceAsync(topic, msg);
 
-    Console.WriteLine($"key: {guidKey}, value: {msg.Value}");
+    Console.WriteLine($"User created key: {user.Id}, {user.Firstname} {user.Lastname}");
     Thread.Sleep(1000);
 }
