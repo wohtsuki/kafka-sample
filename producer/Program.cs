@@ -1,6 +1,7 @@
 ﻿using Confluent.Kafka;
-using producer;
-using System.Text.Json;
+using Confluent.SchemaRegistry;
+using Confluent.SchemaRegistry.Serdes;
+using testw.avro;
 
 var producerConfig = new ProducerConfig
 {
@@ -11,30 +12,38 @@ var producerConfig = new ProducerConfig
     SaslPassword = "vKizS6BMS3UoB8YW9d65xGsxrj1EEnNkEVvAEOtnP7HIi6uuTK7bbaxE9GizRqR8"
 };
 
+var schemaRegistryConfig = new SchemaRegistryConfig
+{
+    Url = "https://psrc-q2n1d.westus2.azure.confluent.cloud",
+    BasicAuthUserInfo = "2FFV7QE4GXDUQTRS:dvdaIlGRy1wKyDWkC3bMrtYSw+aigKippmSt3l4hZwbxZ4zWyZL6tk36uQWcYc7w", //key:secret
+    BasicAuthCredentialsSource = AuthCredentialsSource.UserInfo
+};
+
+var shemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig);
 
 
-
-var producer = new ProducerBuilder<string, string>(producerConfig).Build();
+var producer = new ProducerBuilder<string, user>(producerConfig)
+    .SetValueSerializer(new AvroSerializer<user>(shemaRegistry))
+    .Build();
 string topic = "test1";
 
 
 
 while (true)
 {
-    User user = new()
+    user usr = new()
     {
-        Id = Guid.NewGuid().ToString(),
-        Firstname = Faker.Name.FirstName(),
-        Lastname = Faker.Name.LastName(),   
+        firstname = Faker.Name.FirstName(),
+        lastname = Faker.Name.LastName(),   
     };
 
-    Message<string, string> msg = new()
+    Message<string, user> msg = new()
     {
-        Key = user.Id,
-        Value = JsonSerializer.Serialize(user)
+        Key = Guid.NewGuid().ToString(),
+        Value = usr
     };
     await producer.ProduceAsync(topic, msg);
 
-    Console.WriteLine($"User created key: {user.Id}, {user.Firstname} {user.Lastname}");
+    Console.WriteLine($"User created key: {msg.Key}, {usr.firstname} {usr.lastname}");
     Thread.Sleep(1000);
 }

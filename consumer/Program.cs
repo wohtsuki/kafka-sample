@@ -1,6 +1,8 @@
 ﻿using Confluent.Kafka;
-using consumer;
-using System.Text.Json;
+using Confluent.Kafka.SyncOverAsync;
+using Confluent.SchemaRegistry;
+using Confluent.SchemaRegistry.Serdes;
+using testw.avro;
 
 var consumerConfig = new ConsumerConfig
 {
@@ -13,20 +15,29 @@ var consumerConfig = new ConsumerConfig
     AutoOffsetReset = AutoOffsetReset.Earliest,
 };
 
+
+var schemaRegistryConfig = new SchemaRegistryConfig
+{
+    Url = "https://psrc-q2n1d.westus2.azure.confluent.cloud",
+    BasicAuthUserInfo = "2FFV7QE4GXDUQTRS:dvdaIlGRy1wKyDWkC3bMrtYSw+aigKippmSt3l4hZwbxZ4zWyZL6tk36uQWcYc7w", //key:secret
+    BasicAuthCredentialsSource = AuthCredentialsSource.UserInfo
+};
+
 string topic = "test1";
 
-using (var consumer = new ConsumerBuilder<string, string>(consumerConfig).Build())
+
+using (var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig))
 {
+    using var consumer = new ConsumerBuilder<string, user>(consumerConfig)
+        .SetValueDeserializer(new AvroDeserializer<user>(schemaRegistry).AsSyncOverAsync())
+        .Build();
     consumer.Subscribe(topic);
 
-    while(true)
+    while (true)
     {
         var consumerResult = consumer.Consume();
-        var value = consumerResult.Message.Value;
-        var user = JsonSerializer.Deserialize<User>(value);
+        var usr = consumerResult.Message.Value;
 
-        Console.WriteLine($"User received user: {consumerResult.Message.Key}, {user.Firstname} {user.Lastname}");
+        Console.WriteLine($"User received user: {usr.firstname} {usr.lastname}");
     }
 }
-    
-
